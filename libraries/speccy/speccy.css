@@ -1,0 +1,25 @@
+.speccy-header
+{
+	animation-name: speccy-header;
+	animation-duration: 0.25s;
+	animation-iteration-count: infinite;
+}
+
+.spectrum_back
+{
+	height: 1.5em;
+	min-width: 60%;
+
+	background: black;
+
+	display: flex;
+	flex-direction: row;
+
+	align-items: center;
+	justify-content: center;
+}
+
+.logo_text
+{
+	text-shadow: 0px 0px !important;
+}
