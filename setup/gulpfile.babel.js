@@ -48,7 +48,7 @@ let dirs = {
 	src: "../../projects",
 	int: "../../intermediate",
 	dest: "../../build",
-	libs: "../../libraries"
+	libs: "../libraries"
 };
 
 // From https://www.sitepoint.com/pass-parameters-gulp-tasks/
