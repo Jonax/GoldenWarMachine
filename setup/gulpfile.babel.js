@@ -485,7 +485,7 @@ function JS(project)
 					},
 					resolve: {
 						modules: [
-							"./setup/node_modules"
+							"./GoldenWarMachine/setup/node_modules"
 						]
 					},
 					plugins: plugins
