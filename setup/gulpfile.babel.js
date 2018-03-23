@@ -45,10 +45,10 @@ import merge_selectors from "postcss-merge-selectors"
 import merge_rules from "postcss-merge-rules"
 
 let dirs = {
-	src: "../projects",
-	int: "../intermediate",
-	dest: "../build",
-	libs: "../libraries"
+	src: "../../projects",
+	int: "../../intermediate",
+	dest: "../../build",
+	libs: "../../libraries"
 };
 
 // From https://www.sitepoint.com/pass-parameters-gulp-tasks/
