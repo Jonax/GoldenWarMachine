@@ -503,7 +503,7 @@ function CSS(project)
 }
 
 gulp.task("clean", gulp.parallel(ProjectTasks("clean", Clean)));
-gulp.task("images", gulp.parallel(ProjectTasks("images", Images)));
+gulp.task("images", gulp.series(ProjectTasks("images", Images)));
 gulp.task("js", gulp.parallel(ProjectTasks("js", JS)));
 gulp.task("html", gulp.parallel(ProjectTasks("html", HTML)));
 gulp.task("css", gulp.parallel(ProjectTasks("css", CSS)))
