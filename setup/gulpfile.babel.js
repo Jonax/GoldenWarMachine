@@ -132,7 +132,7 @@ function DetermineBuildType(options)
 }
 
 // fetch command line arguments
-const config = yaml.load("../scripts/config.yaml")
+const config = yaml.load("../../scripts/config.yaml")
 
 const projectConfig = "project" in args
 					? config.uploads[args.project]
