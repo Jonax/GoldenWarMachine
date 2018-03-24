@@ -111,24 +111,22 @@ function DetermineProjects(projectConfig)
 //		- Focus on end result
 //		- Everything minified as much as possible
 //		- GZip compression on everything relevant
-function DetermineBuildType(options)
+function DetermineDeployments(deploymentConfig)
 {
-	if ("build" in args)
+	let target_deployments = Object.entries(deploymentConfig).map(p => {
+		let [name, deployment] = [...d];
+		deployment.name = name;
+
+		return deployment;
+	});
+
+	const deployment_names = Object.keys(deploymentConfig);
+	if ("deploy" in args)
 	{
-		return args.build;
+		target_deployments = target_deployments.filter(d => d.name == args.deploy);
 	}
 
-	if (options.minify)
-	{
-		return "production"
-	}
-	
-	if (options.debug)
-	{
-		return "debug"
-	}
-
-	return "development"
+	return target_deployments;
 }
 
 // fetch command line arguments
@@ -138,18 +136,13 @@ const projectConfig = "project" in args
 					? config.uploads[args.project]
 					: undefined;
 const target_projects = DetermineProjects(config.uploads);
+const target_deployments = DetermineDeployments(config.deployments);
 
 const options = config.options;
-const buildType = DetermineBuildType(options);
 
-if (buildType == "debug")
+function GZipPipe(deployment)
 {
-	dirs.dest = dirs.dest.replace("build", "debug");
-}
-
-function GZipPipe()
-{
-	return gulp_if(options.for_s3, 
+	return gulp_if(deployment.gzip, 
 				gzip({
 					append: false,
 					gzipOptions: {
@@ -158,7 +151,7 @@ function GZipPipe()
 				}));
 }
 
-function CSSPipe(project, splitMode, file = undefined)
+function CSSPipe(project, deployment, splitMode, file = undefined)
 {
 	let format = {
 		breaks: {
@@ -180,7 +173,7 @@ function CSSPipe(project, splitMode, file = undefined)
 		indentWith: "tab",
 		indentBy: 1
 	};
-	if (options.minify)
+	if (deployment.minify)
 	{
 		format = {
 			breaks: {
@@ -235,23 +228,25 @@ function CSSPipe(project, splitMode, file = undefined)
 
 function ProjectTasks(taskName, taskFunction)
 {
-	let taskMap = new Map(
-		target_projects.map(tp => [`${taskName}-${tp.name}-${buildType}`, tp])
-	);
+	let taskMap = new Map();
+	target_deployments.forEach(td =>
+		target_projects.forEach(tp => 
+			taskMap.set(`${taskName}-${tp.name}-${td.name}`, [tp, td])
+	));
 
 	// Registers task in Gulp.
 	taskMap.forEach((v, k) => {
-		gulp.task(k, () => taskFunction(v))
+		gulp.task(k, () => taskFunction(...v))
 	})
 
 	return [...taskMap.keys()];
 }
 
-function Clean(project)
+function Clean(project, deployment)
 {
 	const folders = [
-		`${dirs.int}/${project.name}`,
-		`${dirs.dest}/${project.name}`
+		`${dirs.int}/${deployment.name}/${project.name}`,
+		`${dirs.dest}/${deployment.name}/${project.name}`
 	];
 
 	return Promise.all(folders.map(f => 
@@ -262,7 +257,7 @@ function Clean(project)
 function Images(project)
 {
 	return gulp.src(`${dirs.src}/${project.name}/images/**/*.*`)
-				.pipe(imagemin([
+				.pipe(gulp_if(deployment.optimise_images, imagemin([
 					optipng({
 						optimizationLevel: 7
 					}),
@@ -272,12 +267,12 @@ function Images(project)
 							{	cleanupIDs: false	}
 						]
 					})
-				]))
-				.pipe(GZipPipe())
-				.pipe(gulp.dest(`${dirs.dest}/${project.name}/cdn/images`));
+				])))
+				.pipe(GZipPipe(deployment))
+				.pipe(gulp.dest(`${dirs.dest}/${deployment.name}/${project.name}/cdn/images`));
 }
 
-function HTML(project)
+function HTML(project, deployment)
 {
 	const matomo = project.matomo;
 
@@ -288,10 +283,10 @@ function HTML(project)
 						`${dirs.libs}/loadcss/cssrelpreload.js`
 					])
 				.pipe(gulp_if(options.verbose, using()))
-				.pipe(gulp_if(options.minify, uglify()))
+				.pipe(gulp_if(deployment.minify, uglify()))
 				.pipe(concat("loadcss.js", {newLine: '\n'}))
 				.on('error', reject)
-				.pipe(gulp.dest(`${dirs.int}/${project.name}/js`))
+				.pipe(gulp.dest(`${dirs.int}/${deployment.name}/${project.name}/js`))
 				.on('end', resolve);
 		}),
 		new Promise((resolve, reject) =>
@@ -306,9 +301,9 @@ function HTML(project)
 				.pipe(babel({
 					presets: [ babel_env ]
 				}))
-				.pipe(gulp_if(options.minify, uglify()))
+				.pipe(gulp_if(deployment.minify, uglify()))
 				.on('error', reject)
-				.pipe(gulp.dest(`${dirs.int}/${project.name}/js`))
+				.pipe(gulp.dest(`${dirs.int}/${deployment.name}/${project.name}/js`))
 				.on('end', resolve);
 		}),
 		new Promise((resolve, reject) =>
@@ -316,7 +311,7 @@ function HTML(project)
 			gulp.src(`${dirs.src}/${project.name}/snippets/*`)
 				.pipe(gulp_if(options.verbose, using()))
 				.on('error', reject)
-				.pipe(gulp.dest(`${dirs.int}/${project.name}/snippets`))
+				.pipe(gulp.dest(`${dirs.int}/${deployment.name}/${project.name}/snippets`))
 				.on('end', resolve);
 		})
 	];
@@ -325,10 +320,10 @@ function HTML(project)
 	{
 		prereqs.push(new Promise((resolve, reject) =>
 		{
-			CSSPipe(project, "input", `${dirs.libs}/speccy/speccy.css`)
+			CSSPipe(project, deployment, "input", `${dirs.libs}/speccy/speccy.css`)
 				.pipe(gulp_if(options.verbose, using()))
 				.on('error', reject)
-				.pipe(gulp.dest(`${dirs.int}/${project.name}/css`))
+				.pipe(gulp.dest(`${dirs.int}/${deployment.name}/${project.name}/css`))
 				.on('end', resolve);
 		}));
 	}
@@ -337,10 +332,10 @@ function HTML(project)
 	{
 		prereqs.push(new Promise((resolve, reject) =>
 		{
-			CSSPipe(project, "critical")
+			CSSPipe(project, deployment, "critical")
 				.pipe(rename("critical.inline.css"))
 				.on('error', reject)
-				.pipe(gulp.dest(`${dirs.int}/${project.name}/css`))
+				.pipe(gulp.dest(`${dirs.int}/${deployment.name}/${project.name}/css`))
 				.on('end', resolve);
 		}));
 	}
@@ -375,7 +370,7 @@ function HTML(project)
 							 	return template.pipe(clone())
 												.pipe(nunjucks({
 													data: nunjucksData,
-													path: `${dirs.int}/${project.name}`,
+													path: `${dirs.int}/${deployment.name}/${project.name}`,
 													inheritExtension: true
 												}))
 												.pipe(rename({
@@ -389,7 +384,7 @@ function HTML(project)
 		}
 		else
 		{
-			files = gulp.src(`${dirs.src}/${project.name}/*.html`)
+			files = gulp.src(`${dirs.src}/${deployment.name}/${project.name}/*.html`)
 						.pipe(gulp_if(options.verbose, using()))
 						.pipe(nunjucks({
 							data: nunjucksData,
@@ -400,13 +395,13 @@ function HTML(project)
 		return files.pipe(inline_source({
 					compress: false,
 					pretty: true,
-					rootpath: `${dirs.int}/${project.name}`
+					rootpath: `${dirs.int}/${deployment.name}/${project.name}`
 				}))
-				.pipe(gulp_if(options.minify, htmlmin({
+				.pipe(gulp_if(deployment.minify, htmlmin({
 					collapseWhitespace: true,
 					removeComments: true
 				})))
-				.pipe(GZipPipe())
+				.pipe(GZipPipe(deployment))
 				.pipe(rename(path => {
 					// If no HTML transforms are defined for this project, don't bother.  
 					if (!project.html_transforms)
@@ -432,11 +427,11 @@ function HTML(project)
 										: "";
 					}
 				}))
-				.pipe(gulp.dest(`${dirs.dest}/${project.name}/site`));
+				.pipe(gulp.dest(`${dirs.dest}/${deployment.name}/${project.name}/site`));
 	});
 }
 
-function JS(project)
+function JS(project, deployment)
 {
 	let plugins = []
 	let babelPresets = [
@@ -448,7 +443,7 @@ function JS(project)
 		plugins.push(
 			new webpack.DefinePlugin({
 				"process.env": {
-					"NODE_ENV": JSON.stringify(options.environment),
+					"NODE_ENV": JSON.stringify(deployment.node_env),
 				}
 			})
 		);
@@ -459,13 +454,11 @@ function JS(project)
 	return gulp.src(`${dirs.src}/${project.name}/js/*.js`)
 				.pipe(gulp_if(options.verbose, using()))
 				.pipe(webpack_stream({
-					mode: options.minify
-							? "production"
-							: "development",
+					mode: deployment.minify ? "production" : "development",
 					devtool: false,
 					optimization:
 					{
-						minimize: options.minify,
+						minimize: deployment.minify,
 						concatenateModules: true,
 					},
 					output: {
@@ -490,16 +483,16 @@ function JS(project)
 					},
 					plugins: plugins
 				}, webpack))
-				.pipe(GZipPipe())
-				.pipe(gulp.dest(`${dirs.dest}/${project.name}/cdn/js`));
+				.pipe(GZipPipe(deployment))
+				.pipe(gulp.dest(`${dirs.dest}/${deployment.name}/${project.name}/cdn/js`));
 }
 
-function CSS(project)
+function CSS(project, deployment)
 {
-	return CSSPipe(project, options.css.critical_split ? "rest" : "input")
-			.pipe(GZipPipe())
+	return CSSPipe(project, deployment, options.css.critical_split ? "rest" : "input")
+			.pipe(GZipPipe(deployment))
 			.pipe(rename("main.css"))
-			.pipe(gulp.dest(`${dirs.dest}/${project.name}/cdn/css`));
+			.pipe(gulp.dest(`${dirs.dest}/${deployment.name}/${project.name}/cdn/css`));
 }
 
 gulp.task("clean", gulp.parallel(ProjectTasks("clean", Clean)));
