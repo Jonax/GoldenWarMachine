@@ -254,7 +254,7 @@ function Clean(project, deployment)
 	));
 }
 
-function Images(project)
+function Images(project, deployment)
 {
 	return gulp.src(`${dirs.src}/${project.name}/images/**/*.*`)
 				.pipe(gulp_if(deployment.optimise_images, imagemin([
