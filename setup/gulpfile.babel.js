@@ -113,7 +113,7 @@ function DetermineProjects(projectConfig)
 //		- GZip compression on everything relevant
 function DetermineDeployments(deploymentConfig)
 {
-	let target_deployments = Object.entries(deploymentConfig).map(p => {
+	let target_deployments = Object.entries(deploymentConfig).map(d => {
 		let [name, deployment] = [...d];
 		deployment.name = name;
 
