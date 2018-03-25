@@ -399,7 +399,7 @@ function HTML(project, deployment)
 				}))
 				.pipe(gulp_if(deployment.minify, htmlmin({
 					collapseWhitespace: true,
-					removeComments: true
+					removeComments: !deployment.comments
 				})))
 				.pipe(GZipPipe(deployment))
 				.pipe(rename(path => {
