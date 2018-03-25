@@ -384,7 +384,7 @@ function HTML(project, deployment)
 		}
 		else
 		{
-			files = gulp.src(`${dirs.src}/${deployment.name}/${project.name}/*.html`)
+			files = gulp.src(`${dirs.src}/${project.name}/*.html`)
 						.pipe(gulp_if(options.verbose, using()))
 						.pipe(nunjucks({
 							data: nunjucksData,
