@@ -268,7 +268,7 @@ function Images(project, deployment)
 						]
 					})
 				])))
-				.pipe(GZipPipe(deployment))
+				.pipe(gulp_if(f => !f.relative.endsWith(".png"), GZipPipe(deployment)))
 				.pipe(gulp.dest(`${dirs.dest}/${deployment.name}/${project.name}/cdn/images`));
 }
 
