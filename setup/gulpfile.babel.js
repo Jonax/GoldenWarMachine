@@ -19,6 +19,7 @@ import postcss from "gulp-postcss"
 import rename from "gulp-rename"
 import sourcemaps from "gulp-sourcemaps"
 import strip_comments from "gulp-strip-comments"
+import svgmin from "gulp-svgmin"
 import template from "gulp-template"
 import uglify from "gulp-uglify"
 import using from "gulp-using"
@@ -263,20 +264,103 @@ function Clean(project, deployment)
 
 function Images(project, deployment)
 {
-	return gulp.src(`${dirs.src}/${project.name}/images/**/*.*`)
-				.pipe(gulp_if(deployment.optimise_images, imagemin([
-					optipng({
-						optimizationLevel: 7
-					}),
-					svgo({
-						plugins: [
-							{	removeViewBox: true	},
-							{	cleanupIDs: false	}
-						]
-					})
-				])))
-				.pipe(gulp_if(f => !f.relative.endsWith(".png"), GZipPipe(deployment)))
-				.pipe(gulp.dest(`${dirs.dest}/${deployment.name}/${project.name}/cdn/images`));
+  
+	let pngPath = gulp.src(`${dirs.src}/${project.name}/images/**/*.png`)
+						.pipe(gulp_if(options.verbose, using()))
+						.pipe(gulp_if(deployment.optimise_images, imagemin([
+								optipng({
+									optimizationLevel: 7
+								}),
+						])));
+
+	const js2svg = !deployment.minify
+				 ? { pretty: true, indent: "\t" }
+				 : false;
+
+	let svgPath = gulp.src(`${dirs.src}/${project.name}/images/**/*.svg`)
+						.pipe(gulp_if(options.verbose, using()))
+						.pipe(svgmin({
+							multipass: false,
+							plugins: [
+								{ convertShapeToPath: deployment.optimise_images },		// Translates shapes into equivalent paths
+								// -----------------------------------------
+								{ convertColors: {
+									names2hex: true,
+									rgb2hex: deployment.optimise_images,
+									shorthex: deployment.optimise_images,
+									shortname: false
+								} },
+								{ convertStyleToAttrs: true },	// Turns HTML styles to equivalent attributes
+								{ cleanupAttrs: deployment.optimise_images },			// Cleans up whitespace in attributes
+								{ removeUselessStrokeAndFill: deployment.optimise_images },	// Default/empty stroke & fills
+								{ sortAttrs: deployment.optimise_images },				// Sorts attributes
+								// -----------------------------------------
+								// Merge similar paths, optimise them, and clean up the 
+								{ cleanupNumericValues: {
+									floatPrecision: 1
+								}},
+								{ cleanupListOfValues: {
+									floatPrecision: 1
+								}},
+								{ mergePaths: deployment.optimise_images },
+								{ convertPathData: {
+									active: !deployment.optimise_images,
+									floatPrecision: 1
+								}},
+								// -----------------------------------------
+								// Inline styles?
+								{ minifyStyles: deployment.minify },			// Removes leading zeroes/6-byte RGBs
+								// Round/rewrite numbers?
+								// Round/rewrite number lists?
+								{ convertTransform: deployment.optimise_images },
+								{ removeAttrs: {
+									attrs: [
+										"svg:viewBox",
+										"fill-rule",		// We should be making all segments discrete so fill-rule=evenodd is redundant. 
+										"svg:version",
+										"svg:shape-rendering",
+										"svg:enable-background"
+									]
+								}},
+								// ----------------------------------------------------------
+								// Collapses one-item groups, and moves common attributes to multi-item groups afterwards.
+								{ collapseGroups: deployment.optimise_images },								// Collapses useless groups (e.g. one-item groups)
+								{ moveElemsAttrsToGroup: deployment.optimise_images },	// Moves common attributes in a group's children to the group node
+								// ----------------------------------------------------------
+								{ cleanupEnableBackground: false },			// Deprecated since 2014 in favour of "isolation" property.
+								{ cleanupIDs: deployment.optimise_images },	// Removes IDs
+								{ removeComments: true },			// Comments
+								{ removeDesc: true },				// Removes document description
+								{ removeDoctype: true },			// Removes doctype
+								{ removeEditorsNSData: true }, 		// Inkscape internal data
+								{ removeElementsByAttr: false },
+								{ removeEmptyAttrs: true },			
+								{ removeEmptyContainers: true },	// Empty <* /> containers
+								{ removeEmptyText: true },			// Empty <text> elements
+								{ removeHiddenElems: true },		// Zero-sized elements
+								{ removeMetadata: true }, 			// Inkscape metadata
+								{ removeStyleElement: true },		// <style> elements (not the 'style' attribute)
+								{ removeTitle: true },				// Document title
+								{ removeViewBox: true },			// Document viewbox (only if matches dimensions)
+								{ removeXMLProcInst: true }, 		// XML devlaration
+								{ removeXMLNS: true }, 				// xmlns declarations
+								{ removeUnknownsAndDefaults: true },// Unknown & default attributes (e.g. attr in <svg>)
+								{ removeUnusedNS: true },			// XML namespaces no longer used (e.g. xmlns:cc after copyright info is stripped out)
+								{ removeUselessDefs: true },		// Removes unused defs
+								// -- UNUSED -------------------------------------------------
+								{ addClassesToSVGElement: false },		// No classes need to be added to <svg>
+								{ addAttributesToSVGElement: false },	// No attributes need to be added to <svg>
+								{ moveGroupAttrsToElems: false },
+								{ removeDimensions: false },
+								{ removeNonInheritableGroupAttrs: false },
+								{ removeRasterImages: false }
+							],
+							js2svg: js2svg
+						}))
+						.pipe(GZipPipe(deployment));
+
+	return merge(pngPath, svgPath)
+			.pipe(gulp.dest(`${dirs.dest}/${deployment.name}/${project.name}/cdn/images`));
 }
 
 function HTML(project, deployment)
