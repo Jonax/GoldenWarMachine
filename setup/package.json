@@ -30,6 +30,7 @@
 		"gulp-replace": "latest",
 		"gulp-sourcemaps": "latest",
 		"gulp-strip-comments": "latest",
+		"gulp-svgmin": "latest",
 		"gulp-template": "latest",
 		"gulp-uglify": "latest",
 		"gulp-until": "latest",
