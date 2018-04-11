@@ -18,6 +18,7 @@ import nunjucks from "gulp-nunjucks-render"
 import postcss from "gulp-postcss"
 import rename from "gulp-rename"
 import sourcemaps from "gulp-sourcemaps"
+import strip_comments from "gulp-strip-comments"
 import template from "gulp-template"
 import uglify from "gulp-uglify"
 import using from "gulp-using"
@@ -283,6 +284,7 @@ function HTML(project, deployment)
 						`${dirs.libs}/loadcss/cssrelpreload.js`
 					])
 				.pipe(gulp_if(options.verbose, using()))
+				.pipe(gulp_if(!(deployment.comments || deployment.minify), strip_comments()))
 				.pipe(gulp_if(deployment.minify, uglify()))
 				.pipe(concat("loadcss.js", {newLine: '\n'}))
 				.on('error', reject)
@@ -301,6 +303,7 @@ function HTML(project, deployment)
 				.pipe(babel({
 					presets: [ babel_env ]
 				}))
+				.pipe(gulp_if(!(deployment.comments || deployment.minify), strip_comments()))
 				.pipe(gulp_if(deployment.minify, uglify()))
 				.on('error', reject)
 				.pipe(gulp.dest(`${dirs.int}/${deployment.name}/${project.name}/js`))
@@ -483,6 +486,7 @@ function JS(project, deployment)
 					},
 					plugins: plugins
 				}, webpack))
+				.pipe(gulp_if(!(deployment.comments || deployment.minify), strip_comments()))
 				.pipe(GZipPipe(deployment))
 				.pipe(gulp.dest(`${dirs.dest}/${deployment.name}/${project.name}/cdn/js`));
 }
