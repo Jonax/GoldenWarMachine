@@ -1,3 +1,6 @@
+import fs from "fs"
+import path from "path"
+
 import aws from "aws-sdk";
 import babel_loader from "babel-loader"
 import babel_env from "babel-preset-env"
@@ -27,7 +30,9 @@ import uglify from "gulp-uglify"
 import using from "gulp-using"
 import optipng from "imagemin-optipng"
 import svgo from "imagemin-svgo"
+import md5 from "md5-file"
 import merge from "merge2"
+import error from "plugin-error"
 import css_critical_split from "postcss-critical-split"
 import cssnext from "postcss-cssnext"
 import css_import from "postcss-import"
@@ -82,6 +87,8 @@ const args = (argList =>
 })(process.argv);
 
 let s3 = undefined;
+let s3buckets = {};
+
 function DetermineProjects(projectConfig)
 {
 	let target_projects = Object.entries(projectConfig).map(p => {
@@ -628,6 +635,46 @@ async function GetBucket(bucketEntry)
 	return [bucketID, bucketRoot, bucketObjects]
 }
 
+async function UploadIntoBucket(localRoot, bucketName, bucketRoot, bucketObjects)
+{
+	return gulp.src(`${localRoot}/**`)
+						.pipe(gulp_if(false, using()))
+						.pipe(gulp_fn(async file =>
+						{
+							if (!fs.lstatSync(file.path).isFile())
+							{
+								return;
+							}
+
+							let remoteObjectKey = path.relative(localRoot, file.path)
+														.replace(/\\/g, "/");
+							if (bucketRoot)
+							{
+								remoteObjectKey = `${bucketRoot}/${remoteObjectKey}`;
+							}
+
+							let shouldUpload = true;
+							if (bucketObjects.has(remoteObjectKey))
+							{							
+								const localMD5 = md5.sync(file.path)
+								const remoteMD5 = bucketObjects.get(remoteObjectKey).ETag
+
+								if (localMD5 == remoteMD5)
+								{
+									shouldUpload = false;
+								}
+								else
+								{
+									console.log(`${bucketName}/${remoteObjectKey}`)
+								}
+							}
+							else
+							{
+								console.log(`${bucketName}/${remoteObjectKey} {NEW}`)
+							}
+						}));
+}
+
 async function Publish(project, deployment)
 {
 	if (!(deployment.name == "prod" || deployment.s3))
@@ -646,6 +693,15 @@ async function Publish(project, deployment)
 
 	const [cdnBucket, cdnRoot, cdnObjects] = await GetBucket(project.cdn);
 	const [siteBucket, siteRoot, siteObjects] = await GetBucket(project.site);
+
+	const fileRoot = `${dirs.dest}/${deployment.name}/${project.name}`
+	const localCdnRoot = path.resolve(`${fileRoot}/cdn`);
+	const localSiteRoot = path.resolve(`${fileRoot}/site`);
+
+	const cdnStream = await UploadIntoBucket(localCdnRoot, cdnBucket, cdnRoot, cdnObjects);
+	const siteStream = await UploadIntoBucket(localSiteRoot, siteBucket, siteRoot, siteObjects);
+
+	return merge(cdnStream, siteStream)
 }
 
 gulp.task("clean", gulp.parallel(ProjectTasks("clean", Clean)));
