@@ -596,6 +596,14 @@ function CSS(project, deployment)
 
 async function Publish(project, deployment)
 {
+	if (!(deployment.name == "prod" || deployment.s3))
+	{
+		throw new error({
+			plugin: "GoldenWarMachine",
+			message: `Attempting to publish to S3 with the '${deployment.name}' deployment.`
+		});
+	}
+
 	if (!s3)
 	{
 		aws.config.credentials = new aws.SharedIniFileCredentials({profile: options.s3_profile });
