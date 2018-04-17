@@ -8,6 +8,7 @@
 		"babel-cli": "latest",
 		"babel-core": "latest",
 		"babel-loader": "latest",
+		"babel-polyfill": "latest",
 		"babel-plugin-resolver": "latest",
 		"babel-plugin-transform-es2015-arrow-functions": "latest",
 		"babel-preset-env": "latest",
