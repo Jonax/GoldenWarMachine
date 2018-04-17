@@ -41,6 +41,7 @@
 		"imagemin-optipng": "latest",
 		"imagemin-svgo": "latest",
 		"md5-file": "latest",
+		"mime-types": "latest",
 		"merge2": "latest",
 		"npm": "^5.7.1",
 		"plugin-error": "latest",

@@ -19,6 +19,7 @@ import htmlmin from "gulp-htmlmin"
 import gulp_if from "gulp-if"
 import imagemin from "gulp-imagemin"
 import inline_source from "gulp-inline-source"
+import mime from "mime-types"
 import nunjucks from "gulp-nunjucks-render"
 import postcss from "gulp-postcss"
 import rename from "gulp-rename"
@@ -671,6 +672,55 @@ async function UploadIntoBucket(localRoot, bucketName, bucketRoot, bucketObjects
 							else
 							{
 								console.log(`${bucketName}/${remoteObjectKey} {NEW}`)
+							}
+
+							let nonGzipMimes = [
+								"image/jpeg",
+								"image/png"
+							]
+							shouldUpload = true;
+							if (shouldUpload)
+							{
+								const mimeType = mime.lookup(file.path) || "application/octet-stream"
+								const oneWeek = 60 * 60 * 24 * 7;
+
+								let fileStream = fs.createReadStream(file.path);
+
+								let putParams = {
+									ACL: "public-read",
+									Bucket: bucketName,
+									Key: remoteObjectKey,
+									ContentType: mimeType,
+									CacheControl: `max-age=${oneWeek}`,
+									Body: fileStream
+								};
+
+								if (nonGzipMimes.indexOf(mimeType) == -1)
+								{
+									putParams.ContentEncoding = "gzip"
+								}
+
+								let objectPromise = await s3.putObject(putParams)
+															.promise().then(data =>
+								{
+									const etag = data.ETag.replace(/\"/g, "")
+									if (bucketObjects.has(remoteObjectKey))
+									{
+										bucketObjects.get(remoteObjectKey).ETag = etag
+									}
+									else
+									{
+										bucketObjects.set(remoteObjectKey, {
+											ETag: etag
+										})
+									}
+								});
+								/*
+								if ()
+								{
+									console.log(`\t${bucketName}/${remoteObjectKey} ${mimeType}`)
+								}
+								*/
 							}
 						}));
 }
