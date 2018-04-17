@@ -469,11 +469,11 @@ function HTML(project, deployment)
 
 			files = templates.output
 							 .map(token => {
-							 	Object.assign(nunjucksData, {
+								Object.assign(nunjucksData, {
 									token: token
 								})
 
-							 	return template.pipe(clone())
+								return template.pipe(clone())
 												.pipe(nunjucks({
 													data: nunjucksData,
 													path: `${dirs.int}/${deployment.name}/${project.name}`,
@@ -758,7 +758,7 @@ gulp.task("clean", gulp.parallel(ProjectTasks("clean", Clean)));
 gulp.task("images", gulp.series(ProjectTasks("images", Images)));
 gulp.task("js", gulp.parallel(ProjectTasks("js", JS)));
 gulp.task("html", gulp.parallel(ProjectTasks("html", HTML)));
-gulp.task("css", gulp.parallel(ProjectTasks("css", CSS)))
+gulp.task("css", gulp.parallel(ProjectTasks("css", CSS)));
 gulp.task("publish", gulp.parallel(ProjectTasks("publish", Publish)));
 
 gulp.task("cdn", gulp.parallel("js", "css", "images"));
@@ -766,4 +766,4 @@ gulp.task("site", gulp.parallel("html"));
 
 gulp.task("default", gulp.parallel("js", "css", "site"));
 
-gulp.task("full", gulp.series("clean", "images", "default"))
+gulp.task("full", gulp.series("clean", "images", "default"));
