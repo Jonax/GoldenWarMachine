@@ -280,6 +280,7 @@ function Images(project, deployment)
 	let svgPath = gulp.src(`${dirs.src}/${project.name}/images/**/*.svg`)
 						.pipe(gulp_if(options.verbose, using()))
 						.pipe(svgmin({
+							/*
 							multipass: false,
 							plugins: [
 								{ convertShapeToPath: deployment.optimise_images },		// Translates shapes into equivalent paths
@@ -355,6 +356,7 @@ function Images(project, deployment)
 								{ removeNonInheritableGroupAttrs: false },
 								{ removeRasterImages: false }
 							],
+							*/
 							js2svg: js2svg
 						}))
 						.pipe(GZipPipe(deployment));
