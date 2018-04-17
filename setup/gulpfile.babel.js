@@ -1,3 +1,4 @@
+import aws from "aws-sdk";
 import babel_loader from "babel-loader"
 import babel_env from "babel-preset-env"
 import babel_react from "babel-preset-react";
@@ -79,6 +80,7 @@ const args = (argList =>
 	return arg;
 })(process.argv);
 
+let s3 = undefined;
 function DetermineProjects(projectConfig)
 {
 	let target_projects = Object.entries(projectConfig).map(p => {
@@ -594,6 +596,14 @@ function CSS(project, deployment)
 
 async function Publish(project, deployment)
 {
+	if (!s3)
+	{
+		aws.config.credentials = new aws.SharedIniFileCredentials({profile: options.s3_profile });
+		s3 = new aws.S3();
+	}
+
+	const [cdnBucket, cdnRoot, cdnObjects] = await GetBucket(project.cdn);
+	const [siteBucket, siteRoot, siteObjects] = await GetBucket(project.site);
 }
 
 gulp.task("clean", gulp.parallel(ProjectTasks("clean", Clean)));

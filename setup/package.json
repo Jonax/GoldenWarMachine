@@ -4,6 +4,7 @@
 	"description": "",
 	"main": "gulpfile.babel.js",
 	"dependencies": {
+		"aws-sdk": "latest",
 		"babel-cli": "latest",
 		"babel-core": "latest",
 		"babel-loader": "latest",
