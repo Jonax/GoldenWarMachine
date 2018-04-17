@@ -591,11 +591,17 @@ function CSS(project, deployment)
 			.pipe(gulp.dest(`${dirs.dest}/${deployment.name}/${project.name}/cdn/css`));
 }
 
+
+async function Publish(project, deployment)
+{
+}
+
 gulp.task("clean", gulp.parallel(ProjectTasks("clean", Clean)));
 gulp.task("images", gulp.series(ProjectTasks("images", Images)));
 gulp.task("js", gulp.parallel(ProjectTasks("js", JS)));
 gulp.task("html", gulp.parallel(ProjectTasks("html", HTML)));
 gulp.task("css", gulp.parallel(ProjectTasks("css", CSS)))
+gulp.task("publish", gulp.parallel(ProjectTasks("publish", Publish)));
 
 gulp.task("cdn", gulp.parallel("js", "css", "images"));
 gulp.task("site", gulp.parallel("html"));
