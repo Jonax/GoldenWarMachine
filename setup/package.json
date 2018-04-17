@@ -41,6 +41,7 @@
 		"imagemin-svgo": "latest",
 		"merge2": "latest",
 		"npm": "^5.7.1",
+		"plugin-error": "latest",
 		"postcss-advanced-variables": "latest",
 		"postcss-atroot": "latest",
 		"postcss-clean": "latest",
