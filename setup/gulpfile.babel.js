@@ -10,6 +10,7 @@ import clone from "gulp-clone"
 import concat from "gulp-concat"
 import cleancss from "gulp-clean-css"
 import debug from "gulp-debug"
+import gulp_fn from "gulp-fn"
 import gzip from "gulp-gzip"
 import htmlmin from "gulp-htmlmin"
 import gulp_if from "gulp-if"
@@ -593,6 +594,39 @@ function CSS(project, deployment)
 			.pipe(gulp.dest(`${dirs.dest}/${deployment.name}/${project.name}/cdn/css`));
 }
 
+async function GetBucket(bucketEntry)
+{
+	const [bucketID, bucketRoot] = bucketEntry.split("/", 2);
+
+	let bucketObjects = undefined;
+	if (bucketID in s3buckets)
+	{
+		bucketObjects = s3buckets[bucketID];
+	}
+	else
+	{
+		let objectPromise = await s3.listObjectsV2({
+			Bucket: bucketID
+		}).promise().then(data => { 
+			bucketObjects = new Map(
+				data.Contents.filter(o => o.Size > 0)
+						 		.map(o => 
+						 		{
+						 			const key = o.Key;
+									delete o.Key;
+						 			
+						 			o.ETag = o.ETag.replace(/\"/g, "")
+
+						 			return [key, o];
+						 		})
+			);
+		});
+
+		s3buckets[bucketID] = bucketObjects;
+	}
+
+	return [bucketID, bucketRoot, bucketObjects]
+}
 
 async function Publish(project, deployment)
 {
